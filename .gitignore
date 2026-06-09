@@ -1,0 +1,12 @@
+eln-cache/
+elpa/
+auto-save-list
+history
+places
+places.eld
+recentf
+recentf.eld
+projectile-bookmarks.eld
+\#*
+.#*
+*~
