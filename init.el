@@ -92,16 +92,20 @@
   :custom ((doom-modeline-height 15)))
 
 (use-package helpful
+   :custom
+  (helpful-switch-buffer-function #'dk/helpful-open)
   :bind
   (("C-h f" . helpful-callable)
    ("C-h v" . helpful-variable)
    ("C-h k" . helpful-key)
    ("C-h x" . helpful-command)
-   ("C-h C-h" . helpful-at-point)))
-
+   ("C-h C-h" . helpful-at-point)
+   :map helpful-mode-map
+   ("C-g" . dk/helpful-close)
+   ("<escape>" . dk/helpful-close)))
+ 
 (use-package which-key
   :defer 0
-  :diminish which-key-mode
   :config
   (which-key-mode)
   (setq which-key-idle-delay 1))
@@ -120,8 +124,7 @@
   :custom
   (recentf-max-menu-items 15)
   (recentf-max-saved-items 300)
-  :init
-  (recentf-mode))
+  :init (recentf-mode))
 
 (use-package vertico
   :hook (after-init . vertico-mode)
@@ -140,8 +143,49 @@
 
 (use-package marginalia
   :after vertico
+  :init (marginalia-mode))
+
+(use-package dired
+  :ensure nil
+  :commands (dired dired-jump)
+  :bind (("C-x C-j" . dired-jump))
+  :config
+  (setq dired-listing-switches "-agho --group-directories-first"
+        dired-recursive-copies 'always
+        dired-recursive-deletes 'always
+        dired-dwim-target t
+	dired-kill-when-opening-new-dired-buffer t))
+
+(use-package diredfl
+  :hook (dired-mode . diredfl-mode))
+
+(use-package all-the-icons-dired
+  :hook (dired-mode . all-the-icons-dired-mode))
+
+(use-package projectile
+  :diminish projectile-mode  ; Removes projectile from mode line (optional)
   :init
-  (marginalia-mode))
+  (setq projectile-track-known-projects-automatically t)  ; Auto-add projects
+  (setq projectile-require-project-root nil)              ; Work in any directory
+  (setq projectile-cache-file (expand-file-name "projectile.cache" user-emacs-directory))
+  :config
+  (projectile-mode +1)
+  ;; Basic settings
+  (setq projectile-completion-system 'default)
+  (setq projectile-indexing-method 'alien)       ; Faster on Unix (Linux/Mac)
+  (setq projectile-sort-order 'recently-active)
+  (setq projectile-switch-project-action 'projectile-dired)
+  
+  ;; Ignore certain directories for better performance
+  (nconc  projectile-globally-ignored-directories 
+        '(".idea" ".ensime" ".ccls-cache" "node_modules" 
+          "dist" "build" "target"))
+  (nconc projectile-globally-ignored-files
+        '("*.pyc" "*.o" "*.class" ".DS_Store" "*.elc"))  
+  ;; Key bindings
+  (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
+  ;; Optional: Show file name in modeline
+  (setq projectile-mode-line '(:eval (format " P[%s]" (projectile-project-name)))))
 
 (use-package consult
   :bind (;; Buffer navigation
@@ -161,6 +205,17 @@
   (consult-preview-delay 0)               ;; No delay
   (consult-line-numbers-widen t)          ;; Show line numbers in search
   )
+
+(use-package consult-projectile
+  :after projectile
+  :bind
+  (("C-c p f" . consult-projectile-find-file)
+   ("C-c p p" . consult-projectile-switch-project)
+   ("C-c p b" . consult-projectile-switch-to-buffer)
+   ("C-c p d" . consult-projectile-find-dir))
+  :config
+  (setq consult-projectile-function #'consult-projectile))
+(global-set-key (kbd "C-<return>") "\C-e\C-m")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Theme settings

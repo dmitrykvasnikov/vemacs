@@ -8,3 +8,4 @@
 (global-set-key (kbd "C-x C-b") #'ibuffer)
 (global-set-key (kbd "M-/") #'comment-or-uncomment-region)
 (global-set-key (kbd "C-c t") #'consult-theme)
+(global-set-key (kbd "C-RET") (kbd "C-e C-m"))

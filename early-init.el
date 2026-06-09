@@ -1,7 +1,7 @@
 ;; -*- lexical-binding: t; -*-
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; functions i need to have for list operations
+;; functions i need to have for list operations in the beginning of init.el
 
 ;; Expand path with emacs config dir
 (defun dk/add-to-confdir (relative-path)
@@ -13,3 +13,4 @@
   (let ((expander (if expand-p #'dk/add-to-confdir #'identity)))
     (dolist (path paths)
       (add-to-list list-var (funcall expander path)))))
+
