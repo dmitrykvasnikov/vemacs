@@ -1,5 +1,6 @@
 eln-cache/
 elpa/
+tree-sitter/
 auto-save-list
 history
 places
@@ -10,3 +11,4 @@ projectile-bookmarks.eld
 \#*
 .#*
 *~
+.cache/

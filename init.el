@@ -18,8 +18,9 @@
 ;; Package settings
 (require 'package)
 (setq package-archives '(("melpa" . "https://melpa.org/packages/")
-				 ("org" . "https://orgmode.org/elpa/")
-				 ("elpa" . "https://elpa.gnu.org/packages/")))
+			 ("org" . "https://orgmode.org/elpa/")
+			 ("elpa" . "https://elpa.gnu.org/packages/")
+			 ("nongnu" . "https://elpa.nongnu.org/nongnu/")))
 (package-initialize)
 (unless package-archive-contents
   (package-refresh-contents))
@@ -90,6 +91,8 @@
 (use-package doom-modeline
   :init (doom-modeline-mode 1)
   :custom ((doom-modeline-height 15)))
+
+(use-package expand-region)
 
 (use-package helpful
    :custom
@@ -206,6 +209,120 @@
   (consult-line-numbers-widen t)          ;; Show line numbers in search
   )
 
+(use-package eglot
+  :ensure nil
+  :hook ((haskell-mode . eglot-ensure)) ; Automatically start Eglot in Haskell buffers
+  :config
+  ;; (add-to-list 'eglot-server-programs '(haskell-mode . ("haskell-language-server-wrapper" "--stdio")))
+  (setq eglot-extend-to-xref t)             ; start eglot for cross-referenced files
+  (setq eldoc-echo-area-use-multiline-p nil); don't clutter echo area
+  (setq eldoc-idle-delay 0.3))              ; responsive but not too eager
+
+(use-package xref
+  :ensure nil
+  :bind (("M-."   . xref-find-definitions)
+         ("M-?"   . xref-find-references)
+         ("M-,"   . xref-go-back)
+         ("C-M-." . xref-find-apropos)))
+
+(use-package eldoc-box
+  :after eglot
+  :hook (eglot-managed-mode . eldoc-box-hover-at-point-mode)
+  :config
+  (setq eldoc-box-clear-on-C-g t))
+
+(use-package embark
+  :ensure t
+  :bind (("C-." . embark-act)         ;; act on thing at point
+         ("C-;" . embark-dwim)        ;; do what I mean
+         ("C-h B" . embark-bindings)) ;; show bindings
+  :init
+  ;; Use Embark for Corfu actions
+  (setq completion-cycle-threshold 3)
+  (setq tab-always-indent 'complete))
+
+(use-package embark-consult
+  :ensure t
+  :after (embark consult)
+  :hook (embark-collect-mode . consult-preview-at-point-mode))
+
+(use-package flymake
+  :ensure nil  ;; built-in
+  :hook (prog-mode . flymake-mode)  ;; enable in all prog modes
+  :bind (:map flymake-mode-map
+              ("M-n" . flymake-goto-next-error)
+              ("M-p" . flymake-goto-prev-error))
+  :config
+  (setq flymake-no-changes-timeout 0.5)  ;; recheck after 0.5s idle
+  (setq flymake-start-on-flymake-mode t)
+  (setq flymake-start-on-save-buffer t)
+
+  ;; Show error diagnostics in the fringe
+  (setq flymake-fringe-indicator-position 'left-fringe)
+
+  ;; Pretty fringe indicators
+  (define-fringe-bitmap 'flymake-error-indicator
+    [#b11100000] nil nil '(center repeated))
+  (define-fringe-bitmap 'flymake-warning-indicator
+    [#b01100000] nil nil '(center repeated))
+  (define-fringe-bitmap 'flymake-note-indicator
+    [#b00100000] nil nil '(center repeated)))
+
+;; Show flymake diagnostics at point (echo area / childframe)
+;; (use-package flymake-popon
+;;   :hook (flymake-mode . flymake-popon-mode)
+;;   :custom
+;;   (flymake-popon-method 'popon)  ;; or 'childframe for GUI
+;;   :config
+;;   (when (display-graphic-p)
+;;     (setq flymake-popon-method 'childframe)))
+
+(use-package corfu
+  :ensure t
+  ;; Optional: enable corfu-cycle for TAB cycling
+  :custom
+  (corfu-cycle t)                   ;; TAB cycles candidates
+  (corfu-auto t)                    ;; auto-popup completion
+  (corfu-auto-delay 0.2)            ;; delay before auto popup
+  (corfu-auto-prefix 2)             ;; minimum prefix length for auto
+  (corfu-popupinfo-mode t)          ;; shows documentation popup
+  (corfu-popupinfo-delay 0.5)       ;; delay for doc popup
+  (corfu-preview-current t)         ;; preview current candidate
+  (corfu-preselect 'prompt)         ;; preselect prompt
+  (corfu-on-exact-match nil)        ;; don't auto-insert on exact match
+  (corfu-quit-at-boundary 'separator) ;; quit at boundary
+  (corfu-quit-no-match t)           ;; quit if no match
+  (corfu-separator ?\s)             ;; space is separator (for LSP)
+  (corfu-scroll-margin 5)           ;; scroll margin
+  (corfu-preselect :first)
+
+  :bind
+  (:map corfu-map
+        ("TAB"     . corfu-insert)
+        ("RET"     . corfu-insert)
+        ("M-d"     . corfu-popupinfo-toggle) ;; toggle doc popup
+        ("C-g"     . corfu-quit)
+        ("M-l"     . corfu-show-location))   ;; go to definition
+
+  :init
+  (global-corfu-mode 1)
+  (corfu-popupinfo-mode 1))
+
+;; Corfu in terminal (uses popon instead of child frames)
+(use-package corfu-terminal
+  :ensure t
+  :after corfu
+  :config
+  (unless (display-graphic-p)
+    (corfu-terminal-mode 1)))
+
+;; Icons for Corfu candidates
+(use-package kind-icon
+  :ensure t
+  :after corfu
+  :config
+  (add-to-list 'corfu-margin-formatters #'kind-icon-margin-formatter))
+
 (use-package consult-projectile
   :after projectile
   :bind
@@ -215,7 +332,20 @@
    ("C-c p d" . consult-projectile-find-dir))
   :config
   (setq consult-projectile-function #'consult-projectile))
-(global-set-key (kbd "C-<return>") "\C-e\C-m")
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Langauge specific settings
+
+(use-package haskell-mode
+  :mode ("\\.hs\\'" . haskell-mode)
+  :hook (haskell-mode . haskell-indentation-mode)
+  :bind
+  (:map haskell-mode-map
+	("C-c C-l" . haskell-process-load-file)
+	("C-c C-z" . haskell-interactive-switch)
+	("C-c C-t" . haskell-mode-show-type-at))
+  :config
+  (setq haskell-process-type 'cabal-repl))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Theme settings
@@ -229,3 +359,6 @@
 (use-package gruvbox-theme)
 (use-package spacemacs-theme)
 (load-theme 'gruber-darker)
+
+(provide 'init.el)
+;;; init.el ends here

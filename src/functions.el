@@ -46,3 +46,6 @@ If current window has full frame width, split right; otherwise split below."
         (delete-window))
       ;; Kill the helpful buffer
       (kill-buffer buf)))
+
+(provide 'functions.el)
+;;; functions.el ends here
