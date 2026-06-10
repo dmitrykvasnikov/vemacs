@@ -215,8 +215,12 @@
   :config
   ;; (add-to-list 'eglot-server-programs '(haskell-mode . ("haskell-language-server-wrapper" "--stdio")))
   (setq eglot-extend-to-xref t)             ; start eglot for cross-referenced files
-  (setq eldoc-echo-area-use-multiline-p nil); don't clutter echo area
-  (setq eldoc-idle-delay 0.3))              ; responsive but not too eager
+  (setq eldoc-echo-area-use-multiline-p nil)
+  (setq eldoc-idle-delay 0.5))
+
+(use-package eldoc
+  :config
+  (add-hook 'prog-mode-hook 'eldoc-mode))
 
 (use-package xref
   :ensure nil
@@ -224,12 +228,6 @@
          ("M-?"   . xref-find-references)
          ("M-,"   . xref-go-back)
          ("C-M-." . xref-find-apropos)))
-
-(use-package eldoc-box
-  :after eglot
-  :hook (eglot-managed-mode . eldoc-box-hover-at-point-mode)
-  :config
-  (setq eldoc-box-clear-on-C-g t))
 
 (use-package embark
   :ensure t
@@ -338,7 +336,8 @@
 
 (use-package haskell-mode
   :mode ("\\.hs\\'" . haskell-mode)
-  :hook (haskell-mode . haskell-indentation-mode)
+  :hook ((haskell-mode . haskell-indentation-mode)
+	 (haskell-mode . haskell-doc-mode))
   :bind
   (:map haskell-mode-map
 	("C-c C-l" . haskell-process-load-file)
