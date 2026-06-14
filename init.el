@@ -70,6 +70,7 @@
 (column-number-mode)
 (xterm-mouse-mode 1)
 (electric-pair-mode 1)
+(global-hl-line-mode 1)
 (setq scroll-preserve-screen-position t)
 (setq scroll-conservatively 20)
 (setq word-wrap t)
@@ -166,29 +167,19 @@
   :hook (dired-mode . all-the-icons-dired-mode))
 
 (use-package projectile
-  :diminish projectile-mode  ; Removes projectile from mode line (optional)
   :init
+  (setq projectile-auto-discover t)
   (setq projectile-track-known-projects-automatically t)  ; Auto-add projects
-  (setq projectile-require-project-root nil)              ; Work in any directory
   (setq projectile-cache-file (expand-file-name "projectile.cache" user-emacs-directory))
-  :config
   (projectile-mode +1)
   ;; Basic settings
   (setq projectile-completion-system 'default)
   (setq projectile-indexing-method 'alien)       ; Faster on Unix (Linux/Mac)
   (setq projectile-sort-order 'recently-active)
   (setq projectile-switch-project-action 'projectile-dired)
-  
-  ;; Ignore certain directories for better performance
-  (nconc  projectile-globally-ignored-directories 
-        '(".idea" ".ensime" ".ccls-cache" "node_modules" 
-          "dist" "build" "target"))
-  (nconc projectile-globally-ignored-files
-        '("*.pyc" "*.o" "*.class" ".DS_Store" "*.elc"))  
-  ;; Key bindings
-  (define-key projectile-mode-map (kbd "C-c p") 'projectile-command-map)
-  ;; Optional: Show file name in modeline
-  (setq projectile-mode-line '(:eval (format " P[%s]" (projectile-project-name)))))
+  :bind
+  (:map projectile-mode-map
+	("C-c p" . projectile-command-map)))
 
 (use-package consult
   :bind (;; Buffer navigation
@@ -215,12 +206,72 @@
   :config
   ;; (add-to-list 'eglot-server-programs '(haskell-mode . ("haskell-language-server-wrapper" "--stdio")))
   (setq eglot-extend-to-xref t)             ; start eglot for cross-referenced files
-  (setq eldoc-echo-area-use-multiline-p nil)
+ ;; (setq eldoc-echo-area-use-multiline-p nil)
   (setq eldoc-idle-delay 0.5))
 
 (use-package eldoc
   :config
   (add-hook 'prog-mode-hook 'eldoc-mode))
+
+;; (with-eval-after-load 'eglot
+;;   (with-eval-after-load 'eldoc
+;;     ;; Show only the first line of the documentation (the type signature) in the echo area
+;;     (setq eldoc-echo-area-use-multiline 1)
+    
+    ;; Alternatively, use this strategy to display the signature cleanly
+    ;; (setq eldoc-documentation-strategy #'eldoc-documentation-default)))
+
+(setq eglot-put-doc-in-buffer t) ; Keeps the heavy markdown out of the tiny echo area
+
+
+;; (with-eval-after-load 'eglot
+;;   (defun my-eglot-format-markup-haskell-fix (markup)
+;;     "Clean up Haskell Markdown code fences from HLS before Eglot renders them."
+;;     (pcase-let ((`(,string ,mode) 
+;;                  (if (stringp markup) 
+;;                      (list markup 'gfm-view-mode) 
+;;                    (list (plist-get markup :value) 
+;;                          (pcase (plist-get markup :kind) 
+;;                            ("markdown" 'gfm-view-mode) 
+;;                            ("plaintext" 'text-mode) 
+;;                            (_ major-mode))))))
+;;       (with-temp-buffer
+;;         ;; Clean the raw string of the backtick block tags completely
+;;         (when string
+;;           (setq string (string-replace "```haskell\n" "" string))
+;;           (setq string (string-replace "
+;; ```" "" string)))
+;;         (insert string)
+;;         (let ((inhibit-message t) 
+;;               (message-log-max nil)) 
+;;           (ignore-errors (delay-mode-hooks (funcall mode))))
+;;         (font-lock-ensure)
+;;         (string-trim (buffer-string)))))
+
+;;   ;; Force eglot to use our cleaned up formatter
+;;   (advice-add 'eglot--format-markup :override #'my-eglot-format-markup-haskell-fix))
+
+(with-eval-after-load 'eglot
+  (defun my-eglot-clean-haskell-markdown (args)
+    "Safely strip Haskell code fences from Eglot markup data."
+    (let* ((markup (car args))
+           ;; If markup is a plist (list), look for the :value key, otherwise use the string
+           (str (if (listp markup) (plist-get markup :value) markup)))
+      (when (and (stringp str) (string-match-p "```haskell" str))
+        (let ((clean-str (replace-regexp-in-string "```haskell\n\\|```" "" str)))
+          (if (listp markup)
+              (plist-put markup :value clean-str)
+            (setcar args clean-str)))))
+    args)
+
+  (advice-add 'eglot--format-markup :filter-args #'my-eglot-clean-haskell-markdown))
+
+(add-hook 'haskell-mode-hook
+          (lambda ()
+            ;; Disable the old school doc mode so it doesn't fight with Eglot
+            (haskell-doc-mode -1)
+            ;; Start eglot automatically (optional, if you haven't already)
+            (eglot-ensure)))
 
 (use-package xref
   :ensure nil
