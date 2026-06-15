@@ -9,7 +9,7 @@
 (global-set-key (kbd "M-o") #'other-window)
 (global-set-key (kbd "M-/") #'comment-or-uncomment-region)
 (global-set-key (kbd "C-c t") #'consult-theme)
-(global-set-key (kbd "C-RET") (kbd "C-e C-m"))
+(global-set-key (kbd "S-<return>") (kbd "C-e C-m"))
 (global-set-key (kbd "C-=") #'er/expand-region)
 
 (provide 'keymap)
