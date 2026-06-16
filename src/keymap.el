@@ -11,6 +11,9 @@
 (global-set-key (kbd "C-c t") #'consult-theme)
 (global-set-key (kbd "S-<return>") (kbd "C-e C-m"))
 (global-set-key (kbd "C-=") #'er/expand-region)
+(global-set-key (kbd "M-u") #'upcase-dwim)
+(global-set-key (kbd "M-l") #'downcase-dwim)
+(global-set-key (kbd "M-c") #'capitalize-dwim)
 
 (provide 'keymap)
 ;;; keymap.el ends here
