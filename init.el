@@ -204,12 +204,10 @@
   :ensure nil
   :hook ((haskell-mode . eglot-ensure)) ; Automatically start Eglot in Haskell buffers
   :config
-  ;; (add-to-list 'eglot-server-programs '(haskell-mode . ("haskell-language-server-wrapper" "--stdio")))
+  (add-to-list 'eglot-server-programs '(haskell-mode . ("haskell-language-server-wrapper" "--lsp")))
   (setq eglot-extend-to-xref t)             ; start eglot for cross-referenced files
- ;; (setq eldoc-echo-area-use-multiline-p nil)
-  (setq eldoc-idle-delay 0.5))
-
-(use-package eldoc
+  (setq eglot-code-actions-indications '(eldoc-hint margin))
+  
   :config
   (add-hook 'prog-mode-hook 'eldoc-mode))
 

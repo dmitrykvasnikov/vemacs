@@ -47,5 +47,13 @@ If current window has full frame width, split right; otherwise split below."
       ;; Kill the helpful buffer
       (kill-buffer buf)))
 
+(defun dk/M-x-dwim ()
+  "Run M-x as normal, unless the minibuffer is active, but not selected"
+  (interactive)
+  (if (and (active-minibuffer-window)
+	   (not (minibufferp)))
+      (switch-to-minibuffer)
+    (call-interactively #'execute-extended-command)))
+
 (provide 'functions.el)
 ;;; functions.el ends here

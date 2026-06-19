@@ -15,6 +15,7 @@
 (global-set-key (kbd "M-l") #'downcase-dwim)
 (global-set-key (kbd "M-c") #'capitalize-dwim)
 (global-set-key (kbd "C-c r") #'cua-mode)
+(global-set-key (kbd "M-x") #'dk/M-x-dwim)
 
 (provide 'keymap)
 ;;; keymap.el ends here
