@@ -180,6 +180,10 @@
   (:map projectile-mode-map
 	("C-c p" . projectile-command-map)))
 
+(with-eval-after-load 'projectile
+  (add-to-list 'projectile-globally-ignored-buffers "*projectile-files-errors*")
+  (add-to-list 'projectile-globally-ignored-buffers "EGLOT*"))
+
 (use-package consult
   :bind (;; Buffer navigation
          ("C-x b" . consult-buffer)           ;; Switch buffer (replaces C-x C-b)
@@ -204,6 +208,7 @@
   :hook ((haskell-mode . eglot-ensure)) ; Automatically start Eglot in Haskell buffers
   :config
   (add-to-list 'eglot-server-programs '(haskell-mode . ("haskell-language-server-wrapper" "--lsp")))
+  (setq eglot-events-buffer-config '(:size 0))
   (setq eglot-extend-to-xref t)             ; start eglot for cross-referenced files
   (setq eglot-code-actions-indications '(eldoc-hint margin))
   
