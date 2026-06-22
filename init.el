@@ -10,6 +10,7 @@
 (dk/add-paths-to-list 'custom-theme-load-path '("themes/") t)
 (load "functions.el" nil t)
 (load "keymap.el" nil t)
+(load "vars.el" nil t)
 (setopt custom-file (locate-user-emacs-file "custom.el"))
 (when (file-exists-p custom-file)
   (load custom-file))
@@ -175,8 +176,6 @@
   ;; Basic settings
   (setq projectile-completion-system 'default)
   (setq projectile-indexing-method 'alien)       ; Faster on Unix (Linux/Mac)
-  (setq projectile-sort-order 'recently-active)
-  (setq projectile-switch-project-action 'projectile-dired)
   :bind
   (:map projectile-mode-map
 	("C-c p" . projectile-command-map)))
@@ -394,6 +393,13 @@
 	("C-c C-t" . haskell-mode-show-type-at))
   :config
   (setq haskell-process-type 'cabal-repl))
+
+;; (add-to-list 'display-buffer-alist
+;; 	     '("\\*haskell\\*"
+;; 	       (display-buffer-in-side-window)
+;; 	       (side . right)
+;; 	       (window-width . 0.3)
+;; 	       (window-height . fit-window-to-buffer)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Theme settings
