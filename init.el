@@ -62,11 +62,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; UI Settings
 (setq inhibit-startup-message t)
-(scroll-bar-mode -1)       
-(tool-bar-mode -1)         
-(tooltip-mode -1)          
-(set-fringe-mode 10)       
-(menu-bar-mode -1)         
+(scroll-bar-mode -1)
+(tool-bar-mode -1)
+(tooltip-mode -1)
+(set-fringe-mode 10)
+(menu-bar-mode -1)
 (blink-cursor-mode -1)
 (column-number-mode)
 (xterm-mouse-mode 1)
@@ -108,7 +108,7 @@
    :map helpful-mode-map
    ("C-g" . dk/helpful-close)
    ("<escape>" . dk/helpful-close)))
- 
+
 (use-package which-key
   :defer 0
   :config
@@ -205,13 +205,18 @@
 
 (use-package eglot
   :ensure nil
-  :hook ((haskell-mode . eglot-ensure)) ; Automatically start Eglot in Haskell buffers
+  :hook ((haskell-mode . eglot-ensure)
+	 (rust-mode . eglot-ensure)) ; Automatically start Eglot in Haskell buffers
   :config
-  (add-to-list 'eglot-server-programs '(haskell-mode . ("haskell-language-server-wrapper" "--lsp")))
+  (add-to-list 'eglot-server-programs
+	       '((haskell-mode . ("haskell-language-server-wrapper" "--lsp"))
+		 (rust-ts-mode rust-mode). ("rust-analyzer" :initializationOptions
+					    (:check (:command "clippy")))))
+
   (setq eglot-events-buffer-config '(:size 0))
   (setq eglot-extend-to-xref t)             ; start eglot for cross-referenced files
   (setq eglot-code-actions-indications '(eldoc-hint margin))
-  
+
   :config
   (add-hook 'prog-mode-hook 'eldoc-mode))
 
@@ -219,7 +224,7 @@
 ;;   (with-eval-after-load 'eldoc
 ;;     ;; Show only the first line of the documentation (the type signature) in the echo area
 ;;     (setq eldoc-echo-area-use-multiline 1)
-    
+
     ;; Alternatively, use this strategy to display the signature cleanly
     ;; (setq eldoc-documentation-strategy #'eldoc-documentation-default)))
 
@@ -229,13 +234,13 @@
 ;; (with-eval-after-load 'eglot
 ;;   (defun my-eglot-format-markup-haskell-fix (markup)
 ;;     "Clean up Haskell Markdown code fences from HLS before Eglot renders them."
-;;     (pcase-let ((`(,string ,mode) 
-;;                  (if (stringp markup) 
-;;                      (list markup 'gfm-view-mode) 
-;;                    (list (plist-get markup :value) 
-;;                          (pcase (plist-get markup :kind) 
-;;                            ("markdown" 'gfm-view-mode) 
-;;                            ("plaintext" 'text-mode) 
+;;     (pcase-let ((`(,string ,mode)
+;;                  (if (stringp markup)
+;;                      (list markup 'gfm-view-mode)
+;;                    (list (plist-get markup :value)
+;;                          (pcase (plist-get markup :kind)
+;;                            ("markdown" 'gfm-view-mode)
+;;                            ("plaintext" 'text-mode)
 ;;                            (_ major-mode))))))
 ;;       (with-temp-buffer
 ;;         ;; Clean the raw string of the backtick block tags completely
@@ -244,8 +249,8 @@
 ;;           (setq string (string-replace "
 ;; ```" "" string)))
 ;;         (insert string)
-;;         (let ((inhibit-message t) 
-;;               (message-log-max nil)) 
+;;         (let ((inhibit-message t)
+;;               (message-log-max nil))
 ;;           (ignore-errors (delay-mode-hooks (funcall mode))))
 ;;         (font-lock-ensure)
 ;;         (string-trim (buffer-string)))))
@@ -271,9 +276,9 @@
 (add-hook 'haskell-mode-hook
           (lambda ()
             ;; Disable the old school doc mode so it doesn't fight with Eglot
-            (haskell-doc-mode -1)
+            (haskell-doc-mode -1)))
             ;; Start eglot automatically (optional, if you haven't already)
-            (eglot-ensure)))
+            ;; (eglot-ensure)))
 
 (use-package xref
   :ensure nil
@@ -398,6 +403,18 @@
 	("C-c C-t" . haskell-mode-show-type-at))
   :config
   (setq haskell-process-type 'cabal-repl))
+
+(use-package rust-mode
+  :config
+  (setq rust-format-on-save t))
+
+(use-package rustic
+  :custom
+  (rustic-lsp-client 'eglot)
+  :hook
+  (rustic-mode . eglot-ensure)
+  :config
+  (setq rustic-format-on-save t))
 
 ;; (add-to-list 'display-buffer-alist
 ;; 	     '("\\*haskell\\*"

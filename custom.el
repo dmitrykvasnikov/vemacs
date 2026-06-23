@@ -13,7 +13,8 @@
 			 json-mode kind-icon magit marginalia
 			 markdown-mode multiple-cursor
 			 multiple-cursors orderless rainbow-delimiters
-			 spacemacs-theme vertico yaml-mode))
+			 rust-mode rustic spacemacs-theme vertico
+			 yaml-mode))
  '(package-vc-selected-packages
    '((modus-nordic-night-theme :url
 			       "https://codeberg.org/ashton314/modus-nordic-night"))))

@@ -16,24 +16,8 @@
 (global-set-key (kbd "M-c") #'capitalize-dwim)
 (global-set-key (kbd "C-c r") #'cua-mode)
 (global-set-key (kbd "M-x") #'dk/M-x-dwim)
-(defun dk/kill-buffer-smart ()
-  "Kill current buffer without prompt if unmodified.
-If modified, ask to save before killing.
-Choosing 'n' kills without saving (no second prompt)."
-  (interactive)
-  (if (and buffer-file-name (buffer-modified-p))
-      ;; Modified file buffer: ask to save
-      (if (y-or-n-p (format "Save %s before killing? " buffer-file-name))
-          ;; User says yes: save then kill
-          (progn
-            (save-buffer)
-            (kill-buffer (current-buffer)))
-        ;; User says no: kill without saving, no second prompt
-        (kill-buffer nil)
-    ;; Unmodified or non-file buffer: kill without prompt
-    (kill-buffer (current-buffer)))))
-;; Bind to a key (e.g., C-x k)
-(global-set-key (kbd "C-x k") #'dk/kill-buffer-smart)
+(global-set-key (kbd "C-c k") (lambda() (interactive) (kill-buffer (current-buffer))))
+(global-set-key (kbd "C-c e") #'eval-buffer)
 
 (provide 'keymap)
 ;;; keymap.el ends here
