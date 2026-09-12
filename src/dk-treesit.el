@@ -1,6 +1,6 @@
 ;; -*- lexical-binding: t; -*-
 
-;;; Tree-sitter: grammars, first-use installation, major-mode remapping
+;;; Tree-sitter: grammars, explicit installation, major-mode remapping
 ;;
 ;; Loaded ahead of dk-programming and dk-languages: `major-mode-remap-alist'
 ;; has to be in place before any file is visited, and `rust-mode-treesitter-derive'
@@ -8,13 +8,15 @@
 
 (require 'treesit)
 
+;; Emacs 31 otherwise prompts to download grammars when files are opened.
+(setq treesit-auto-install-grammar 'never)
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Grammars
 ;;
 ;; Built into <user-emacs-directory>/tree-sitter/ rather than taken from the
-;; distro: Arch only packages c, rust, markdown and bash -- no cpp, go, toml,
-;; yaml or json -- and its grammars track tree-sitter 0.26, while this Emacs
-;; loads ABI 13-15 only (see `treesit-library-abi-version').
+;; distro, so availability and grammar revisions do not depend on distro
+;; packaging.  Check `treesit-library-abi-version' for Emacs' supported ABI.
 ;;
 ;; Every revision is pinned.  An unpinned master can raise the ABI past 15, or
 ;; rename nodes out from under the queries in Emacs' own ts modes; the second
@@ -52,42 +54,53 @@ is non-nil."
           (message "treesit: %s already installed" lang)
         (message "treesit: installing %s..." lang)
         (treesit-install-language-grammar lang))))
-  (message "treesit: done"))
+  ;; The built-in installer can report a warning instead of signaling an
+  ;; error.  Do not announce success unless every library actually loads.
+  (let ((missing (seq-remove #'treesit-language-available-p
+                             (mapcar #'car treesit-language-source-alist))))
+    (when missing
+      (user-error "Tree-sitter grammars still unavailable: %s" missing)))
+  (message "treesit: all grammars available; restart Emacs to update modes"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Use the ts mode wherever a classic mode would have been chosen.
-;; Emacs 30 fills `major-mode-remap-defaults' for TeX only -- nothing below
-;; happens on its own.
-(dolist (remap '((c-mode         . c-ts-mode)
-                 (c++-mode       . c++-ts-mode)
-                 (c-or-c++-mode  . c-or-c++-ts-mode)
-                 (go-mode        . go-ts-mode)
-                 (js-json-mode   . json-ts-mode)
-                 (conf-toml-mode . toml-ts-mode)
-                 (sh-mode        . bash-ts-mode)))
-  (add-to-list 'major-mode-remap-alist remap))
+;; Only select tree-sitter modes when their required grammars are available.
+;; Restart Emacs after installing grammars to update these choices; in
+;; particular rust-mode's parent is fixed when its library is first loaded.
+(dolist (entry '((c-mode c-ts-mode c)
+                 (c++-mode c++-ts-mode c cpp)
+                 (c-or-c++-mode c-or-c++-ts-mode c cpp)
+                 (js-json-mode json-ts-mode json)
+                 (conf-toml-mode toml-ts-mode toml)
+                 (sh-mode bash-ts-mode bash)))
+  (let ((classic (car entry)) (mode (cadr entry)))
+    (setf (alist-get classic major-mode-remap-alist nil t)
+          (and (seq-every-p #'treesit-language-available-p (cddr entry))
+               mode))))
 
-;; Haskell deliberately gets no entry: haskell-mode stays the default and
-;; `dk/haskell-toggle-ts' (dk-languages.el) adds one on demand.  Rust needs
-;; none either -- rustic reaches rust-ts-mode by derivation, see below.
-
-;; Extensions stock Emacs has no ts mapping for.  `add-to-list' prepends, so
-;; these beat what is already there -- which is the point for go.mod (mapped
-;; to `m2-mode', i.e. Modula-2) and CMakeLists.txt (mapped to `text-mode').
-(dolist (entry '(("\\.go\\'"             . go-ts-mode)
-                 ("/go\\.mod\\'"         . go-mod-ts-mode)
-                 ("\\.ya?ml\\'"          . yaml-ts-mode)
-                 ("CMakeLists\\.txt\\'"  . cmake-ts-mode)
-                 ("\\.cmake\\'"          . cmake-ts-mode)
+;; These file types have no installed classic language package.  Use plain
+;; text when a grammar is missing rather than an unrelated mode (go.mod used
+;; to select Modula-2).  No downloads occur while visiting a file.
+(dolist (entry '(("\\.go\\'" go-ts-mode go)
+                 ("/go\\.mod\\'" go-mod-ts-mode gomod)
+                 ("\\.ya?ml\\'" yaml-ts-mode yaml)
+                 ("CMakeLists\\.txt\\'" cmake-ts-mode cmake)
+                 ("\\.cmake\\'" cmake-ts-mode cmake)
                  ("/\\(?:Containerfile\\|Dockerfile\\)\\(?:\\.[^/]*\\)?\\'"
-                  . dockerfile-ts-mode)))
-  (add-to-list 'auto-mode-alist entry))
+                  dockerfile-ts-mode dockerfile)))
+  (setf (alist-get (car entry) auto-mode-alist nil nil #'equal)
+        (if (treesit-language-available-p (nth 2 entry))
+            (cadr entry)
+          'text-mode)))
 
-;; rust-mode derives from `rust-ts-mode' when this is set, and rustic-mode
-;; derives from rust-mode -- so this single variable puts rustic buffers on
-;; tree-sitter.  It is a defcustom, so it must be set before rust-mode loads;
-;; that is the whole reason this module sorts ahead of dk-languages.
-(setq rust-mode-treesitter-derive t)
+;; Haskell remains classic by default.  Rustic can also use classic Rust
+;; when its grammar is absent; this must be chosen before rust-mode loads.
+(setq rust-mode-treesitter-derive (treesit-language-available-p 'rust))
+
+(let ((missing (seq-remove #'treesit-language-available-p
+                           (mapcar #'car treesit-language-source-alist))))
+  (when missing
+    (message "Tree-sitter missing %s; run M-x dk/treesit-install-all, then restart Emacs"
+             missing)))
 
 (provide 'dk-treesit)
 ;;; dk-treesit.el ends here

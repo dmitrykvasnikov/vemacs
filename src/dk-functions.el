@@ -184,62 +184,37 @@ clang-format binary.  The ts and classic modes are both listed because
        (not (or (locate-dominating-file default-directory ".clang-format")
                 (locate-dominating-file default-directory "_clang-format")))))
 
-(defun dk/eglot-clean-haskell-markdown (args)
-  "Safely strip Haskell code fences from Eglot markup data in ARGS."
-  (let* ((markup (car args))
-         ;; If markup is a plist (list), look for the :value key, otherwise use the string
-         (str (if (listp markup) (plist-get markup :value) markup)))
-    (when (and (stringp str) (string-match-p "```haskell" str))
-      (let ((clean-str (replace-regexp-in-string "```haskell\n\\|```" "" str)))
-        (if (listp markup)
-            (plist-put markup :value clean-str)
-          (setcar args clean-str)))))
-  args)
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Waiting for eglot before an xref jump
-(defun dk/eglot-managed-p ()
-  "Non-nil when Eglot is loaded and manages the current buffer."
-  (and (fboundp 'eglot-managed-p)
-       (eglot-managed-p)))
+;; Wait only for a server that has actually started initializing.  A mode hook
+;; alone says nothing about connection state (the user may have shut it down).
+(defun dk/eglot-server-initialized (server)
+  "Remember SERVER while it initializes for the current buffer."
+  (setq dk/eglot-connecting-server server))
 
-(defun dk/eglot-expected-p ()
-  "Non-nil when this buffer's major mode is set up to start Eglot.
-Walks the mode's parents, so a mode whose `eglot-ensure' hook sits on a
-base mode is still recognised.  Checking the hooks rather than a fixed
-list of modes means this cannot drift out of step with the `:hook' clause
-in dk-programming.el."
-  (and buffer-file-name
-       (seq-some (lambda (mode)
-                   (let ((hook (intern-soft (format "%s-hook" mode))))
-                     (and hook (boundp hook)
-                          (memq 'eglot-ensure (symbol-value hook)))))
-                 (derived-mode-all-parents major-mode))))
+(defun dk/eglot-forget-connecting-server ()
+  "Forget the startup wait when Eglot starts or stops managing this buffer."
+  (setq dk/eglot-connecting-server nil))
+
+(defun dk/eglot-managed-p ()
+  "Non-nil when Eglot manages the current buffer."
+  (and (fboundp 'eglot-managed-p) (eglot-managed-p)))
+
+(defun dk/eglot-connecting-p ()
+  "Non-nil while this buffer's initializing server is still running."
+  (and dk/eglot-connecting-server
+       (not (dk/eglot-managed-p))
+       (fboundp 'jsonrpc-running-p)
+       (jsonrpc-running-p dk/eglot-connecting-server)))
 
 (defun dk/xref-wait-for-eglot (&rest _)
-  "Wait for a starting Eglot server before xref settles on a backend.
-`eglot-ensure' connects in the background, so right after a file is
-opened the buffer is not managed yet and `xref-backend-functions' still
-answers `etags': M-. then prompts for a TAGS file that does not exist
-instead of jumping, which reads as \"navigation is broken\".  The window
-is milliseconds for a warm server but seconds for gopls on a cold cache
-in a cgo-heavy project -- precisely when the first jump is made.
-
-Waiting here rather than raising `eglot-sync-connect' keeps visiting a
-file instant and pays the cost only on the jump that needs it.  Erroring
-out afterwards is deliberate: in a mode that has an LSP server the etags
-fallback has nothing useful to offer."
-  ;; The managed check short-circuits every jump in a connected buffer, which
-  ;; is all of them after the first.
-  (when (and (not (dk/eglot-managed-p))
-             (dk/eglot-expected-p))
+  "Wait briefly for an initializing server, then allow normal xref lookup.
+Disconnected, failed and deliberately stopped servers do not block other
+backends.  C-g can interrupt the wait."
+  (when (dk/eglot-connecting-p)
     (with-delayed-message (1 "Waiting for the language server...")
       (let ((deadline (+ (float-time) dk/eglot-connect-wait)))
-        (while (and (not (dk/eglot-managed-p))
-                    (< (float-time) deadline))
-          (accept-process-output nil 0.05))))
-    (unless (dk/eglot-managed-p)
-      (user-error "No language server in this buffer yet; try M-x eglot"))))
+        (while (and (dk/eglot-connecting-p) (< (float-time) deadline))
+          (accept-process-output nil 0.05))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Minibuffer display

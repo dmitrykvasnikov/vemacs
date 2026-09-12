@@ -56,9 +56,15 @@
               ;; Mirror the haskell-mode keys above where an equivalent exists.
               ;; This mode drives a bare ghci, not a cabal repl.
               ("C-c C-l" . haskell-ts-compile-region-and-go)
-              ("C-c C-z" . run-haskell)
+              ("C-c C-z" . dk/haskell-ts-run-repl)
               ("C-c C-t" . eldoc-doc-buffer))
   :config
+  ;; Both Haskell packages define `run-haskell'.  Capture this package's
+  ;; implementation, not an alias to the shared symbol that can be replaced.
+  (unless (fboundp 'dk/haskell-ts-run-repl)
+    (defalias 'dk/haskell-ts-run-repl (symbol-function 'run-haskell)
+      "Start the tree-sitter mode's GHCi independently of classic Haskell's REPL."))
+  (keymap-set haskell-ts-mode-map "C-c C-r" #'dk/haskell-ts-run-repl)
   ;; Loading this file prepends ("\\.hs\\'" . haskell-ts-mode) to
   ;; `auto-mode-alist' as soon as the grammar is ready, which would hijack .hs
   ;; the first time the package is touched.  Drop it -- the remap alist decides.

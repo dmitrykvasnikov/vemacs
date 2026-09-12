@@ -84,5 +84,8 @@ Used by `dk/xref-wait-for-eglot' (dk-functions.el).  Generous on purpose:
 the wait only happens on a jump made before the server has answered
 `initialize', and C-g interrupts it.")
 
+(defvar-local dk/eglot-connecting-server nil
+  "Server initialized from this buffer, used to bound xref's startup wait.")
+
 (provide 'dk-vars)
 ;;; dk-vars.el ends here

@@ -29,8 +29,7 @@
 ;; LSP
 (use-package eglot
   :ensure nil                           ; built-in
-  ;; Only the tree-sitter modes are listed: dk-treesit.el remaps c-mode,
-  ;; c++-mode and go-mode onto them, so the classic hooks would never run.
+  ;; Include classic C/C++ modes for machines without their grammars.
   ;; Haskell is the exception -- it stays on haskell-mode by default and
   ;; `dk/haskell-toggle-ts' switches it, so both are named.  A parent mode's
   ;; hook does not run for its children here: haskell-ts-mode registers
@@ -38,6 +37,8 @@
   ;; `derived-mode-p' about the relation but does not chain the hooks.
   :hook ((haskell-mode    . eglot-ensure)
          (haskell-ts-mode . eglot-ensure)
+         (c-mode          . eglot-ensure)
+         (c++-mode        . eglot-ensure)
          (c-ts-mode       . eglot-ensure)
          (c++-ts-mode     . eglot-ensure)
          ;; rust is started by rustic, see dk-languages.el
@@ -61,13 +62,11 @@
   ;; The cost is a cold restart on the next visit; `dk/xref-wait-for-eglot'
   ;; covers the part of that which used to look like broken navigation.
   (setq eglot-autoshutdown t)
-  ;; Haskell servers wrap their docs in ```haskell fences; strip them so the
-  ;; eldoc buffer shows plain text.  The formatter is private and Eglot has no
-  ;; public transformation hook, so guard it to keep a future rename from
-  ;; breaking configuration loading.
-  (when (fboundp 'eglot--format-markup)
-    (advice-add 'eglot--format-markup
-                :filter-args #'dk/eglot-clean-haskell-markdown)))
+  ;; Keep Markdown intact: Eglot renders fenced code itself.  Remove the old
+  ;; filter too when this module is reloaded in an existing session.
+  (advice-remove 'eglot--format-markup #'dk/eglot-clean-haskell-markdown)
+  (add-hook 'eglot-server-initialized-hook #'dk/eglot-server-initialized)
+  (add-hook 'eglot-managed-mode-hook #'dk/eglot-forget-connecting-server))
 
 ;; NOTE: `eglot-put-doc-in-buffer' and `eglot-code-actions-indications' were
 ;; set here before, but neither exists in the eglot shipped with Emacs 30.2 —

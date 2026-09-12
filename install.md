@@ -193,7 +193,7 @@ Use **ghcup**, not pacman: HLS is built against an exact GHC version and Arch's
 `~/.cabal/bin` on `PATH`.
 
 Note `haskell-ts-mode` (`src/dk-languages.el`) drives a bare `ghci` via
-`run-haskell`, while `haskell-mode` uses `cabal repl` — both come from ghcup.
+`dk/haskell-ts-run-repl`, while `haskell-mode` uses `cabal repl` — both come from ghcup.
 
 ---
 
@@ -273,7 +273,14 @@ Build requirements: `git`, `gcc`, `g++`, `make` — all from `base-devel`.
 Network access to github.com.
 
 `M-x dk/treesit-install-all` installs the grammars explicitly.  Opening a
-source file never downloads or compiles a grammar implicitly.
+source file never downloads or compiles a grammar implicitly, including on
+Emacs 31 (`treesit-auto-install-grammar` is explicitly `never`). Until a grammar
+is installed, use the classic mode where available; Go, go.mod, YAML, CMake
+and Dockerfiles use plain text when their grammar is missing.
+
+Restart Emacs after installing grammars to activate the mode selections.
+Rust's parent mode is chosen when its library loads, so a restart also ensures
+Rustic uses the newly installed Rust grammar.
 
 ---
 
@@ -367,4 +374,15 @@ And the grammars:
 (dolist (src treesit-language-source-alist)
   (message "%-12s %s" (car src)
            (if (treesit-language-available-p (car src)) "ok" "MISSING")))
+```
+
+
+Configuration regression tests (with packages and grammars installed):
+
+```bash
+emacs -Q --batch -L src -l test/dk-functions-test.el \
+  -f ert-run-tests-batch-and-exit
+emacs --batch --init-directory="$PWD" --load early-init.el \
+  --eval '(package-activate-all)' --load init.el \
+  -l test/dk-integration-test.el -f ert-run-tests-batch-and-exit
 ```
